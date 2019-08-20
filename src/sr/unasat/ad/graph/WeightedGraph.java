@@ -1,16 +1,19 @@
 package sr.unasat.ad.graph;
 
+
 import sr.unasat.ad.entities.Plaats;
-import sr.unasat.ad.entities.VervoersType;
 import sr.unasat.ad.queue.QueueB;
 import sr.unasat.ad.stack.StackA;
 
+import java.util.Stack;
+
+
 public class WeightedGraph {
     private final int MAX_VERTS = 20;
-    private final int INFINITY = 1000000;
-    private Vertex vertexList[]; //array van vertices
-    private int adjMat[][]; //adjacency matrix
-    private int nVerts; //current number of vertices
+    private final int INFINITY = -1000000;
+    private Vertex vertexList[];
+    private int adjMat[][];
+    private int nVerts;
     private int nTree;
     private DistPar sPath[];
     private int currentVert;
@@ -21,12 +24,11 @@ public class WeightedGraph {
 
     public WeightedGraph() {
         vertexList = new Vertex[MAX_VERTS];
-        adjMat = new int[MAX_VERTS][MAX_VERTS]; //adjacency matrix
+        adjMat = new int[MAX_VERTS][MAX_VERTS];
         nVerts = 0;
         nTree = 0;
-
-        for (int j=0; j<MAX_VERTS; j++) {//set adjacency
-            for (int k=0; k<MAX_VERTS; k++) {//matrix to 0
+        for (int j = 0; j < MAX_VERTS; j++) {
+            for (int k = 0; k < MAX_VERTS; k++) {
                 adjMat[j][k] = INFINITY;
             }
         }
@@ -44,32 +46,30 @@ public class WeightedGraph {
         adjMat[start][end] = weight;
     }
 
-    public void path(int start, boolean minWeight) {
-        int startTree = 0;
+    public void path(int start, boolean maxWeight) {
+        int startTree = start;
         vertexList[startTree].isInTree = true;
         weightQueue.insert(startTree);
         int weight;
-
-        if (minWeight) {
+        if (maxWeight) {
             weight = INFINITY;
-        }
-        else {
+        } else {
             weight = -INFINITY;
         }
         nTree = 1;
-        for(int j=0; j<nVerts; j++) {
+        for (int j = 0; j < nVerts; j++) {
             int tempDist = adjMat[startTree][j];
             sPath[j] = new DistPar(startTree, tempDist);
         }
         while (nTree < nVerts) {
             int index;
-            if (minWeight) {
-                index = getMin();
-            } else {
+            if (maxWeight) {
                 index = getMax();
+            } else {
+                index = getMin();
             }
             int dist = sPath[index].distance;
-            if (minWeight) {
+            if (maxWeight) {
                 if (dist > weight) {
                     weight = dist;
                     weightQueue.insert(index);
@@ -85,7 +85,7 @@ public class WeightedGraph {
                 }
             }
             if (dist == INFINITY) {
-                System.out.println("There are unreachable vertices");
+                System.out.println("There are unreachable traders");
                 break;
             } else {
                 currentVert = index;
@@ -93,36 +93,24 @@ public class WeightedGraph {
             }
             vertexList[currentVert].isInTree = true;
             nTree++;
-            if (minWeight) {
-                adjust_sPath_Min();
-            } else {
+            if (maxWeight) {
                 adjust_sPath_Max();
+            } else {
+                adjust_sPath_Min();
             }
         }
-        displayPaths(minWeight);
+        displayPaths(maxWeight);
         nTree = 0;
-        for (int j=0; j<nVerts; j++) {
+        for (int j = 0; j < nVerts; j++) {
             vertexList[j].isInTree = false;
         }
-    }
-
-    public int getMin() {
-        int minDist = INFINITY;
-        int indexMin = 0;
-        for (int j=1; j<nVerts; j++) {
-            if (!vertexList[j].isInTree && sPath[j].distance < minDist) {
-                minDist = sPath[j].distance;
-                indexMin = j;
-            }
-        }
-        return indexMin;
     }
 
     public int getMax() {
         int maxDist = INFINITY;
         int indexMax = 0;
-        for (int j=1; j<nVerts; j++) {
-            if (!vertexList[j].isInTree && sPath[j].distance != INFINITY && sPath[j].distance > maxDist) {
+        for (int j = 1; j < nVerts; j++) {
+            if (!vertexList[j].isInTree && sPath[j].distance > maxDist) {
                 maxDist = sPath[j].distance;
                 indexMax = j;
             }
@@ -130,7 +118,19 @@ public class WeightedGraph {
         return indexMax;
     }
 
-    public void adjust_sPath_Min() {
+    public int getMin() {
+        int minDist = -INFINITY;
+        int indexMin = 0;
+        for (int j = 1; j < nVerts; j++) {
+            if (!vertexList[j].isInTree && sPath[j].distance != INFINITY && sPath[j].distance < minDist) {
+                minDist = sPath[j].distance;
+                indexMin = j;
+            }
+        }
+        return indexMin;
+    }
+
+    public void adjust_sPath_Max() {
         int column = 1;
         while (column < nVerts) {
             if (vertexList[column].isInTree) {
@@ -140,8 +140,7 @@ public class WeightedGraph {
             int currentToFringe = adjMat[currentVert][column];
             int startToFringe = startToCurrent + currentToFringe;
             int sPathDist = sPath[column].distance;
-
-            if (startToFringe < sPathDist) {
+            if (startToFringe > sPathDist) {
                 sPath[column].parentVert = currentVert;
                 sPath[column].distance = startToFringe;
             }
@@ -149,7 +148,7 @@ public class WeightedGraph {
         }
     }
 
-    public void adjust_sPath_Max() {
+    public void adjust_sPath_Min() {
         int column = 1;
         while (column < nVerts) {
             if (vertexList[column].isInTree) {
@@ -161,12 +160,11 @@ public class WeightedGraph {
                 int startToFringe = startToCurrent + currentToFringe;
                 int sPathDist = sPath[column].distance;
                 if (sPathDist != INFINITY) {
-                    if (startToFringe > sPathDist) {
+                    if (startToFringe < sPathDist) {
                         sPath[column].parentVert = currentVert;
                         sPath[column].distance = startToFringe;
                     }
-                }
-                else {
+                } else {
                     sPath[column].parentVert = currentVert;
                     sPath[column].distance = startToFringe;
                 }
@@ -175,16 +173,27 @@ public class WeightedGraph {
         }
     }
 
-    public void displayPaths(boolean minWeight) {
+    public void displayPaths(boolean maxWeight) {
+//        for (int j = 0; j < nVerts; j++) {
+//            System.out.print(vertexList[j].trader.getName() + " (Profit: ");
+//            if (sPath[j].distance == INFINITY) {
+//                System.out.print("0");
+//            } else {
+//                System.out.print(sPath[j].distance);
+//            }
+//            String parent = vertexList[sPath[j].parentVert].trader.getName();
+//            System.out.println(" - After trade with " + parent + ")");
+//        }
+//        System.out.println();
         int index = weightQueue.remove();
-        if (minWeight) {
-            System.out.println("Min route voor " + vertexList[index].plaats.getPlaatsNaam() + ":");
+        if (maxWeight) {
+            System.out.println("Max prijs " + vertexList[index].plaats.getPlaatsNaam() + ":");
         } else {
-            System.out.println("Max route voor " + vertexList[index].plaats.getPlaatsNaam() + ":");
+            System.out.println("Min prijs " + vertexList[index].plaats.getPlaatsNaam() + ":");
         }
         while (!weightQueue.isEmpty()) {
             index = weightQueue.remove();
-            System.out.print(vertexList[index].plaats.getPlaatsNaam() + " (Bedrag: ");
+            System.out.print(vertexList[index].plaats.getPlaatsNaam() + " (Prijs: ");
             if (sPath[index].distance == INFINITY) {
                 System.out.print("0)");
             } else {
@@ -195,19 +204,7 @@ public class WeightedGraph {
             }
         }
         System.out.println();
-        }
-//        for (int j = 0; j < nVerts; j++) {
-//            System.out.println(vertexList[j].plaats + " = ");
-//
-//            if (sPath[j].distance == INFINITY) {
-//                System.out.println("inf");
-//            } else {
-//                System.out.println(sPath[j].distance);
-//            }
-//            String parent = vertexList[sPath[j].parentVert].plaats;
-//            System.out.println("(" + parent + ")");
-//        }
-//        System.out.println();
+    }
 
     public void displayVertex(int v) {
         System.out.println(vertexList[v].plaats.getPlaatsNaam());
@@ -216,11 +213,10 @@ public class WeightedGraph {
     public void dfs(int start, String plaats) {
         boolean found = false;
         int searchTerm = 0;
-
         String fullSearch = "";
         if (!plaats.isEmpty()) {
             searchTerm++;
-            fullSearch += "naam \"" + plaats + "\"";
+            fullSearch += "plaats \"" + plaats + "\"";
         }
 
         vertexList[start].wasVisited = true;
@@ -233,16 +229,15 @@ public class WeightedGraph {
             } else {
                 vertexList[v].wasVisited = true;
                 int foundTerm = 0;
-                if (vertexList[v].plaats.getPlaatsNaam().replace(" ", "").equalsIgnoreCase(plaats.replace(" ", "")) || vertexList[v].plaats.getPlaatsNaam().replace(" ", "").equalsIgnoreCase(plaats.replace(" ", "")) || vertexList[v].plaats.getPlaatsNaam().replace(" ", "").equalsIgnoreCase(plaats.replace(" ", ""))) {
+                if (vertexList[v].plaats.getPlaatsNaam().contains(plaats)) {
                     foundTerm++;
                 }
-
                 if (foundTerm == searchTerm) {
                     if (!found) {
                         if (searchTerm != 0) {
-                            System.out.println("Plaatsen gevonden met " + fullSearch + " erna " + vertexList[start].plaats.getPlaatsNaam() + ":");
+                            System.out.println("Trader(s) found with " + fullSearch + " after " + vertexList[start].plaats.getPlaatsNaam() + ":");
                         } else {
-                            System.out.println("plaatsen gevonden erna " + vertexList[start].plaats.getPlaatsNaam() + ":");
+                            System.out.println("Trader(s) found after " + vertexList[start].plaats.getPlaatsNaam() + ":");
                         }
                     }
                     found = true;
@@ -253,9 +248,9 @@ public class WeightedGraph {
         }
         if (!found) {
             if (searchTerm != 0) {
-                System.out.println("Geen plaatsen gevonden met  " + fullSearch + " erna " + vertexList[start].plaats.getPlaatsNaam() + ":");
+                System.out.println("No trader(s) found with " + fullSearch + " after " + vertexList[start].plaats.getPlaatsNaam() + ":");
             } else {
-                System.out.println("Geen plaatsen gevonden na het zoeken van " + vertexList[start].plaats.getPlaatsNaam());
+                System.out.println("No trader(s) found searching after " + vertexList[start].plaats.getPlaatsNaam());
             }
         }
         for (int j = 0; j < nVerts; j++) {
@@ -278,7 +273,7 @@ public class WeightedGraph {
                 vertexList[v2].wasVisited = true;
                 if (breath == level) {
                     if (!found) {
-                        System.out.println("Plaatsen gevonden met " + String.valueOf(level) + " ... van " + vertexList[start].plaats.getPlaatsNaam() + ":");
+                        System.out.println("Trader(s) found with " + String.valueOf(level) + " middleman(s) from " + vertexList[start].plaats.getPlaatsNaam() + ":");
                     }
                     found = true;
                     displayVertex(v2);
@@ -296,7 +291,7 @@ public class WeightedGraph {
             }
         }
         if (!found) {
-            System.out.println("Geen plaatsen gevonden met " + String.valueOf(level) + " ... van " + vertexList[start].plaats.getPlaatsNaam());
+            System.out.println("No traders found with " + String.valueOf(level) + " middleman(s) from " + vertexList[start].plaats.getPlaatsNaam());
         }
         for (int j = 0; j < nVerts; j++) {
             vertexList[j].wasVisited = false;
@@ -304,7 +299,7 @@ public class WeightedGraph {
     }
 
     public int getAdjUnvisitedVertex(int v) {
-        for (int j=0; j<nVerts; j++) {
+        for (int j = 0; j < nVerts; j++) {
             if (adjMat[v][j] != INFINITY && vertexList[j].wasVisited == false) {
                 return  j;
             }

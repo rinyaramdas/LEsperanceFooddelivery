@@ -1,7 +1,6 @@
 package sr.unasat.ad.app;
 
 import sr.unasat.ad.entities.Plaats;
-import sr.unasat.ad.entities.VervoersType;
 import sr.unasat.ad.graph.WeightedGraph;
 
 public class App {
@@ -44,7 +43,7 @@ public class App {
 
         System.out.println();
 
-        theGraph.dfs(0, "Waterloo");
+        theGraph.dfs(0, "Van Petten Polder");
 
         System.out.println();
 
